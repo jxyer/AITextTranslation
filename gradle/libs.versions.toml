@@ -1,5 +1,6 @@
 [versions]
-agp = "8.2.0-alpha04"
+agp = "8.1.2"
+constraintlayout-compose = "1.0.0"
 epublib-core = "4.0"
 folioreader = "0.5.4"
 kotlin = "1.8.10"
@@ -14,6 +15,7 @@ readium-sdk = "2.1.0"
 slf4j-android = "1.7.25"
 
 [libraries]
+androidx-constraintlayout-compose = { module = "androidx.constraintlayout:constraintlayout-compose", version.ref = "constraintlayout-compose" }
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
 folioreader = { module = "com.folioreader:folioreader", version = "0.1.1" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -31,7 +33,6 @@ ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 material3 = { group = "androidx.compose.material3", name = "material3" }
 epublib-core = { group = "com.positiondev.epublib", name = "epublib-core", version = "3.1" }
-
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
