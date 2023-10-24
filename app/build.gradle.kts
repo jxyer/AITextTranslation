@@ -57,6 +57,8 @@ dependencies {
         exclude("xmlpull")
     }
     implementation(libs.slf4j.android)
+    // jsoup
+    implementation(libs.jsoup)
 
     implementation(libs.androidx.constraintlayout.compose)
     implementation(libs.core.ktx)

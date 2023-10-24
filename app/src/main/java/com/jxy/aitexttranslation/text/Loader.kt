@@ -4,5 +4,7 @@ import java.io.InputStream
 
 interface Loader {
 
-    fun parse(inputStream: InputStream): String
+    fun parse(inputStream: InputStream)
+
+    fun readText(startPosition: Int, endPosition: Int): Any
 }
