@@ -1,5 +1,6 @@
 package com.jxy.aitexttranslation.text
 
+import com.jxy.aitexttranslation.model.Token
 import java.io.InputStream
 
 class MobiLoader : Loader {
@@ -8,7 +9,11 @@ class MobiLoader : Loader {
         TODO("Not yet implemented")
     }
 
-    override fun readText(start: Int, end: Int): Any {
+    override fun readText(wordNumber: Int): List<Token> {
+        TODO("Not yet implemented")
+    }
+
+    override fun newText(tokens: List<Token>) {
         TODO("Not yet implemented")
     }
 }

@@ -36,6 +36,7 @@ import com.jxy.aitexttranslation.text.EpubLoader
 import com.jxy.aitexttranslation.text.Loader
 import com.jxy.aitexttranslation.text.MobiLoader
 import com.jxy.aitexttranslation.text.TxtLoader
+import com.jxy.aitexttranslation.text.translate.AITranslate
 import com.jxy.aitexttranslation.ui.compose.EPUB_TYPE
 import com.jxy.aitexttranslation.ui.compose.FileImport
 import com.jxy.aitexttranslation.ui.compose.MOBI_TYPE
@@ -103,9 +104,9 @@ class MainActivity : ComponentActivity() {
         }
         val textLoader = getTextLoader(context.contentResolver.getType(viewModel.fileUri.value))
         textLoader.parse(inputStream)
-        val content = textLoader.readText(0, 4000)
-//        val translatedText=translatingText(context)
-        println("内容：${content}")
+        val tokens = textLoader.readText(1000)
+        val translatedTokens = AITranslate().translate(tokens)
+        textLoader.newText(translatedTokens)
     }
 
     // 语言列表
