@@ -1,16 +1,27 @@
 package com.jxy.aitexttranslation.text
 
-import com.jxy.aitexttranslation.model.Token
 import java.io.InputStream
 
 interface Loader {
 
-    fun parse(inputStream: InputStream)
+    /**
+     * text total
+     */
+    fun total(): Int
+
+    suspend fun parse(inputStream: InputStream)
 
     /**
      * reads the specified number of words from the book.
      */
-    fun readText(wordNumber: Int): List<Token>
+    fun readText(maxWordNumber: Int): String
 
-    fun newText(tokens: List<Token>)
+    /**
+     * 尽量读取ai token最大字数,保存句子完整性
+     */
+    fun readText(): String
+
+    fun newText(text: String)
+
+    fun writeNewText()
 }

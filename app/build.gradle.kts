@@ -59,6 +59,12 @@ dependencies {
     implementation(libs.slf4j.android)
     // jsoup
     implementation(libs.jsoup)
+    // retrofit
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+    // gson
+    implementation(libs.gson)
+
 
     implementation(libs.androidx.constraintlayout.compose)
     implementation(libs.core.ktx)

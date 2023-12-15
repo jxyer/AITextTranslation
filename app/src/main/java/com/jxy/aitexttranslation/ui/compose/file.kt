@@ -5,6 +5,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
@@ -14,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import com.jxy.aitexttranslation.ProjectConfig
 
 const val TXT_TYPE = "text/plain"
 const val EPUB_TYPE = "application/epub+zip"
@@ -65,4 +67,24 @@ fun FileImport(modifier: Modifier, setFileUri: (uri: Uri) -> Unit) {
         }
     }
 
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@SuppressLint("ShowToast")
+@Composable
+fun FileSave(modifier: Modifier) {
+    val context = LocalContext.current
+    val fileSavePath = context.getExternalFilesDir("")
+    ProjectConfig.SavePath = fileSavePath!!.path
+    val filepath by remember {
+        mutableStateOf(TextFieldValue(ProjectConfig.SavePath))
+    }
+    Box(modifier = modifier) {
+        TextField(
+            value = filepath,
+            onValueChange = { },
+            readOnly = true,
+            label = { Text(text = "文档保存路径") }
+        )
+    }
 }

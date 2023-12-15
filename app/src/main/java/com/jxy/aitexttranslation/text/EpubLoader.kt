@@ -1,10 +1,14 @@
 package com.jxy.aitexttranslation.text
 
+import com.jxy.aitexttranslation.ProjectConfig
 import com.jxy.aitexttranslation.model.Epub
 import com.jxy.aitexttranslation.model.Token
 import nl.siegmann.epublib.domain.Book
+import nl.siegmann.epublib.domain.TOCReference
 import nl.siegmann.epublib.epub.EpubReader
+import nl.siegmann.epublib.epub.EpubWriter
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import java.io.InputStream
 
 
@@ -14,70 +18,105 @@ class EpubLoader : Loader {
 
     // used to reconstruct EPUB
     private val readEpubList = arrayListOf<Epub>()
-    override fun parse(inputStream: InputStream) {
+    override fun total(): Int {
+        return book.tableOfContents.tocReferences.size
+    }
+
+    override suspend fun parse(inputStream: InputStream) {
         // read epub file
         val epubReader = EpubReader()
         book = epubReader.readEpub(inputStream)
     }
 
-    override fun readText(wordNumber: Int): List<Token> {
+    override fun readText(maxWordNumber: Int): String {
+        val tocReferences = book.tableOfContents.tocReferences
+        val tocReference = tocReferences[textReadStatus.currentChapterIndex]
+        val doc = Jsoup.parse(String(tocReference.resource.data))
+
+        return ""
+    }
+
+    override fun readText(): String {
+        val resultTokens = arrayListOf<Token>()
+
         val tocReferences = book.tableOfContents.tocReferences
         if (textReadStatus.currentChapterIndex == tocReferences.size) {
-            return arrayListOf()
+            return ""
         }
         var readWordNumber = 0
-        val resultTokens = arrayListOf<Token>()
         val lastChapterIndex = textReadStatus.currentChapterIndex
-        while (readWordNumber < wordNumber) {
-            val tocReference = tocReferences[textReadStatus.currentChapterIndex]
+        while (readWordNumber < ProjectConfig.AI_MAX_TOKEN) {
+            if (textReadStatus.currentChapterIndex == tocReferences.size) {
+                textReadStatus.currentChapterIndex -= 1
+                break
+            }
+            val tocReference = tocReferences[textReadStatus.currentChapterIndex++]
             val title = tocReference.title
-            // get text content
             val doc = Jsoup.parse(String(tocReference.resource.data))
-            var menuReadWordNumber = 0
             val elements = doc.allElements
-            // record text location
-            val tokens = arrayListOf<Token>()
             val elementWithIndex =
                 if (lastChapterIndex == textReadStatus.currentChapterIndex) elements.withIndex()
                     .drop(textReadStatus.currentNodeIndex)
                 else elements.withIndex()
+            var nodeReadWordNumber = 0
             for ((index, element) in elementWithIndex) {
-                var text = element.ownText()
+                val text = element.ownText()
                 if (text.isEmpty()) continue
-                // continue writing from the previous ending position.
-                if (lastChapterIndex == textReadStatus.currentChapterIndex && index == textReadStatus.currentNodeIndex) {
-                    text = text.substring(textReadStatus.currentNodeReadWordNumber)
-                }
-                val readTextLength = readWordNumber + text.length
-                if (readTextLength >= wordNumber) {
-                    val diffWords = text.substring(0, readTextLength - wordNumber)
-                    menuReadWordNumber += diffWords.length
-                    readWordNumber += diffWords.length
+                // todo 当一段的内容长度大于MAX_TOKEN时，需要处理
+                if (text.length > ProjectConfig.AI_MAX_TOKEN) continue
+                readWordNumber += text.length
+                nodeReadWordNumber += text.length
+                if (readWordNumber >= ProjectConfig.AI_MAX_TOKEN) {
                     textReadStatus.currentNodeIndex = index
-                    textReadStatus.currentNodeReadWordNumber = diffWords.length
-                    val token = Token(index, diffWords)
-                    tokens.add(token)
-                    resultTokens.add(token)
+                    textReadStatus.currentNodeReadWordNumber = nodeReadWordNumber - text.length
+                    readWordNumber -= text.length
                     break
                 } else {
-                    menuReadWordNumber += text.length
-                    readWordNumber += text.length
-                    val token = Token(index, text)
-                    tokens.add(token)
-                    resultTokens.add(token)
+                    resultTokens.add(Token(index, text))
                 }
             }
-            readEpubList.add(
-                Epub(
-                    index = textReadStatus.currentChapterIndex, title = title, tokens = tokens
-                )
-            )
-            if (readWordNumber < wordNumber) textReadStatus.currentChapterIndex++
         }
-        return resultTokens
+        return ""
     }
 
-    override fun newText(tokens: List<Token>) {
+    override fun newText(text: String) {
         TODO("Not yet implemented")
+    }
+
+    // 上一次读取的状态
+    private var lastReadStatus: TextReadStatus = TextReadStatus()
+    private val writer = EpubWriter()
+    fun newText(tokens: List<Token>) {
+        if (tokens.isEmpty()) return
+        var lastChapterIndex = lastReadStatus.currentChapterIndex
+        var lastNodeIndex = lastReadStatus.currentNodeIndex
+
+        val tocReferences = book.tableOfContents.tocReferences
+        var preMarkFlag = tokens[0].markFlag
+        var doc = getNewChapter(lastChapterIndex, tocReferences)
+        var elements = doc.allElements
+        tokens.forEach {
+            if (preMarkFlag > it.markFlag) {
+                println("translated text: $doc")
+                // 修改上一张的内容
+                tocReferences[lastChapterIndex].resource.data = doc.text().toByteArray()
+                // 换章节
+                lastChapterIndex++
+                doc = getNewChapter(lastChapterIndex, tocReferences)
+                elements = doc.allElements
+            }
+            preMarkFlag = it.markFlag
+            val node = elements[it.markFlag]
+            node.text(it.text)
+        }
+        lastReadStatus = textReadStatus
+    }
+
+    private fun getNewChapter(chapterIndex: Int, tocReferences: List<TOCReference>): Document {
+        val tocReference = tocReferences[chapterIndex]
+        return Jsoup.parse(String(tocReference.resource.data))
+    }
+
+    override fun writeNewText() {
     }
 }

@@ -1,19 +1,29 @@
 package com.jxy.aitexttranslation.text
 
-import com.jxy.aitexttranslation.model.Token
 import java.io.InputStream
 
 class MobiLoader : Loader {
-
-    override fun parse(inputStream: InputStream) {
+    override fun total(): Int {
         TODO("Not yet implemented")
     }
 
-    override fun readText(wordNumber: Int): List<Token> {
+    override suspend fun parse(inputStream: InputStream) {
         TODO("Not yet implemented")
     }
 
-    override fun newText(tokens: List<Token>) {
+    override fun readText(maxWordNumber: Int): String {
+        TODO("Not yet implemented")
+    }
+
+    override fun readText(): String {
+        TODO("Not yet implemented")
+    }
+
+    override fun newText(text: String) {
+        TODO("Not yet implemented")
+    }
+
+    override fun writeNewText() {
         TODO("Not yet implemented")
     }
 }
