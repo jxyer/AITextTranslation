@@ -75,7 +75,10 @@ fun FileImport(modifier: Modifier, setFileUri: (uri: Uri) -> Unit) {
 fun FileSave(modifier: Modifier) {
     val context = LocalContext.current
     val fileSavePath = context.getExternalFilesDir("")
-    ProjectConfig.SavePath = fileSavePath!!.path
+
+    if (fileSavePath != null) {
+        ProjectConfig.SavePath = fileSavePath.path
+    }
     val filepath by remember {
         mutableStateOf(TextFieldValue(ProjectConfig.SavePath))
     }

@@ -1,27 +1,40 @@
 package com.jxy.aitexttranslation.text
 
+import android.content.Context
+import android.net.Uri
+import androidx.core.net.toFile
 import java.io.InputStream
 
-interface Loader {
+abstract class Loader(private val filename: String, val language: String) {
 
     /**
      * text total
      */
-    fun total(): Int
+    fun total(context: Context, uri: Uri): Long {
+        return if (uri.scheme == "file") {
+            uri.toFile().length()
+        } else {
+            val parcelFileDescriptor = context.contentResolver.openFileDescriptor(uri, "r")
+                ?: throw Exception("文件没有找到")
+            val statSize = parcelFileDescriptor.statSize
+            parcelFileDescriptor.close()
+            statSize
+        }
+    }
 
-    suspend fun parse(inputStream: InputStream)
+    abstract suspend fun parse(inputStream: InputStream)
 
     /**
      * reads the specified number of words from the book.
      */
-    fun readText(maxWordNumber: Int): String
+    abstract fun readText(maxWordNumber: Int): String
 
     /**
      * 尽量读取ai token最大字数,保存句子完整性
      */
-    fun readText(): String
+    abstract fun readText(): String
 
-    fun newText(text: String)
+    abstract fun newText(text: String)
 
-    fun writeNewText()
+    abstract fun close()
 }

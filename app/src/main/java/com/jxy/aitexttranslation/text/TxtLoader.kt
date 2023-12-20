@@ -9,23 +9,17 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.InputStreamReader
-import java.io.OutputStreamWriter
-import java.nio.charset.StandardCharsets
 
-class TxtLoader(private val language: String) : Loader {
+class TxtLoader(filename: String, language: String) : Loader(filename, language) {
     private var textReadStatus = TextReadStatus()
     private lateinit var textStreamReader: BufferedReader
-    private var textStreamWriter: OutputStreamWriter =
-        OutputStreamWriter(
-            FileOutputStream(File(ProjectConfig.SavePath + "/aa.txt")),
-            StandardCharsets.UTF_8
+    private var textStreamWriter: FileOutputStream =
+        FileOutputStream(
+            File(ProjectConfig.SavePath + "/$filename"),
+            true
         )
 
     private lateinit var languagePunctuation: Tool.LanguagePunctuationResult
-
-    override fun total(): Int {
-        return 1000
-    }
 
     override suspend fun parse(inputStream: InputStream) {
         textStreamReader = BufferedReader(withContext(Dispatchers.IO) {
@@ -77,11 +71,12 @@ class TxtLoader(private val language: String) : Loader {
     }
 
     override fun newText(text: String) {
-        textStreamWriter.write(text)
+        textStreamWriter.write(text.toByteArray())
     }
 
 
-    override fun writeNewText() {
-        TODO("Not yet implemented")
+    override fun close() {
+        textStreamReader.close()
+        textStreamWriter.close()
     }
 }

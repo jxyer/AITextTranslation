@@ -22,9 +22,14 @@ import java.io.InputStream
 
 class MainViewModel : ViewModel() {
 
+    enum class UIState {
+        IDLE,
+        Translating,
+        Translated
+    }
 
-    // progress value: min:0 max:1
-    var translationProgress = mutableStateOf(0f)
+    var uiState = mutableStateOf(UIState.IDLE)
+
     var openaiKey =
         mutableStateOf(TextFieldValue("sk"))
     var sourceLanguage = mutableStateOf("")
@@ -32,9 +37,8 @@ class MainViewModel : ViewModel() {
     var fileUri = mutableStateOf(Uri.EMPTY)
     var fileSavePath = mutableStateOf("")
 
-    var curTranslateProgress = mutableStateOf(0f)
-    var totalTranslateProgress = mutableStateOf(0)
-    var isReadyTranslate = mutableStateOf(false)
+    var curTranslateTextNumber = mutableStateOf(0L)
+    var totalTranslateTextNumber = mutableStateOf(1L)
 
     fun startTranslating(context: Context) {
         val inputStream = getInputStreamFromUri(context, fileUri.value)
@@ -42,47 +46,60 @@ class MainViewModel : ViewModel() {
             Toast.makeText(context, "文件获取失败", Toast.LENGTH_SHORT).show()
             return
         }
-        val textLoader = getTextLoader(context.contentResolver.getType(fileUri.value))
-        viewModelScope.launch(GlobalExceptionHandler(context).globalExceptionHandler) {
+        if (fileUri.value.lastPathSegment == null) {
+            Toast.makeText(context, "文件名称获取失败", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val textLoader = getTextLoader(
+            fileUri.value.lastPathSegment!!,
+            context.contentResolver.getType(fileUri.value)
+        )
+        viewModelScope.launch(GlobalExceptionHandler {
+            println(it.message)
+            Toast.makeText(
+                context,
+                it.message,
+                Toast.LENGTH_SHORT
+            ).show()
+            reset()
+        }.globalExceptionHandler) {
             textLoader.parse(inputStream)
-            totalTranslateProgress.value = textLoader.total()
-            isReadyTranslate.value = true
-            val onePercent: Int = totalTranslateProgress.value / 100
+            uiState.value = UIState.Translating
+            totalTranslateTextNumber.value = textLoader.total(context,fileUri.value)
             val translator = AITranslate(targetLanguage.value)
             do {
-                val tokens = textLoader.readText()
-                if (tokens.isEmpty()) {
+                val text = textLoader.readText()
+                if (text.isBlank()) {
+                    textLoader.close()
+                    uiState.value = UIState.Translated
                     break
                 }
-                val translatedData = translator.translate(tokens)
+                val translatedData = translator.translate(text)
                 textLoader.newText(translatedData)
                 delay(1000)
-                curTranslateProgress.value += 1
-                if ((onePercent % curTranslateProgress.value).toInt() == onePercent) {
-                    translationProgress.value += 0.1f
-                }
+                curTranslateTextNumber.value += text.length
             } while (true)
         }
     }
 
 
-    private fun getTextLoader(mimeType: String?): Loader {
+    private fun getTextLoader(filename: String, mimeType: String?): Loader {
         var textLoader: Loader? = null
         when {
             mimeType.equals(TXT_TYPE) -> {
-                textLoader = TxtLoader(sourceLanguage.value)
+                textLoader = TxtLoader(filename, sourceLanguage.value)
             }
 
             mimeType.equals(EPUB_TYPE) -> {
-                textLoader = EpubLoader()
+                textLoader = EpubLoader(filename, sourceLanguage.value)
             }
 
             mimeType.equals(MOBI_TYPE) -> {
-                textLoader = MobiLoader()
+                textLoader = MobiLoader(filename, sourceLanguage.value)
             }
         }
         if (textLoader == null) {
-            textLoader = TxtLoader(sourceLanguage.value)
+            textLoader = TxtLoader(filename, sourceLanguage.value)
         }
         return textLoader
     }
@@ -90,6 +107,12 @@ class MainViewModel : ViewModel() {
     private fun getInputStreamFromUri(context: Context, uri: Uri): InputStream? {
         val contentResolver = context.contentResolver
         return contentResolver.openInputStream(uri)
+    }
+
+    private fun reset() {
+        uiState = mutableStateOf(UIState.IDLE)
+        curTranslateTextNumber = mutableStateOf(0L)
+        totalTranslateTextNumber = mutableStateOf(1L)
     }
 
 }

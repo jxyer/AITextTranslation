@@ -1,10 +1,13 @@
 package com.jxy.aitexttranslation
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,10 +38,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import com.jxy.aitexttranslation.ui.compose.FileImport
 import com.jxy.aitexttranslation.ui.compose.FileSave
 import com.jxy.aitexttranslation.ui.theme.AppTheme
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
@@ -61,7 +67,6 @@ class MainActivity : ComponentActivity() {
         val context = LocalContext.current
         var openaiKey by remember { viewModel.openaiKey }
         var fileUri by remember { viewModel.fileUri }
-
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -108,10 +113,6 @@ class MainActivity : ComponentActivity() {
             Spacer(modifier = Modifier.height(10.dp))
             FileSave(modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(10.dp))
-            TextField(
-                value = viewModel.fileSavePath.value,
-                onValueChange = { viewModel.fileSavePath.value = it })
-            Spacer(modifier = Modifier.height(10.dp))
             Button(onClick = {
                 if (fileUri == Uri.EMPTY) {
                     Toast.makeText(context, "请选择文件", Toast.LENGTH_SHORT).show()
@@ -119,20 +120,55 @@ class MainActivity : ComponentActivity() {
                 }
                 ProjectConfig.AI_TOKEN = openaiKey.text
                 viewModel.startTranslating(context)
-            }) {
-                Text(text = "开始翻译")
+            }, enabled = viewModel.uiState.value != MainViewModel.UIState.Translating) {
+                if (viewModel.uiState.value == MainViewModel.UIState.Translated) {
+                    Text(text = "重新翻译")
+                } else {
+                    Text(text = "开始翻译")
+                }
             }
-
-            if (viewModel.isReadyTranslate.value) {
+            if (viewModel.uiState.value == MainViewModel.UIState.Translated) {
+                OpenFile(File(ProjectConfig.SavePath + "/${viewModel.fileUri.value.lastPathSegment}"))
+            }
+            if (viewModel.uiState.value == MainViewModel.UIState.Translating) {
                 Column {
                     LinearProgressIndicator(
-                        progress = viewModel.translationProgress.value,
+                        progress = (viewModel.curTranslateTextNumber.value / viewModel.totalTranslateTextNumber.value).toFloat(),
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Text(text = "当前进度${viewModel.curTranslateProgress.value}/${viewModel.totalTranslateProgress.value}")
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "当前进度${viewModel.curTranslateTextNumber.value}/${viewModel.totalTranslateTextNumber.value}")
+                        Text(text = "${viewModel.curTranslateTextNumber.value / viewModel.totalTranslateTextNumber.value}%")
+                    }
                 }
             }
+        }
+    }
+
+    @Composable
+    fun OpenFile(file: File) {
+        val context = LocalContext.current
+        val launcher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult(),
+            onResult = { result ->
+                // 检查 Activity 是否成功启动
+                println(result)
+            }
+        )
+        val fileUri =
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        Button(onClick = {
+            launcher.launch(Intent(Intent.ACTION_VIEW).apply {
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+                setDataAndType(fileUri, context.contentResolver.getType(fileUri))
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            })
+        }) {
+            Text(text = "翻译完成，打开文件")
         }
     }
 
@@ -178,6 +214,19 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
+            }
+        }
+    }
+
+    @Preview
+    @Composable
+    fun A(){
+        AppTheme {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                AITextTranslate(viewModel = MainViewModel())
             }
         }
     }

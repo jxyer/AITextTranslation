@@ -12,15 +12,12 @@ import org.jsoup.nodes.Document
 import java.io.InputStream
 
 
-class EpubLoader : Loader {
+class EpubLoader(filename: String, language: String) : Loader(filename, language) {
     private lateinit var book: Book
     private var textReadStatus = TextReadStatus()
 
     // used to reconstruct EPUB
     private val readEpubList = arrayListOf<Epub>()
-    override fun total(): Int {
-        return book.tableOfContents.tocReferences.size
-    }
 
     override suspend fun parse(inputStream: InputStream) {
         // read epub file
@@ -117,6 +114,6 @@ class EpubLoader : Loader {
         return Jsoup.parse(String(tocReference.resource.data))
     }
 
-    override fun writeNewText() {
+    override fun close() {
     }
 }

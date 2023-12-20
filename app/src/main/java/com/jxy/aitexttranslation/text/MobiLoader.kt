@@ -2,10 +2,7 @@ package com.jxy.aitexttranslation.text
 
 import java.io.InputStream
 
-class MobiLoader : Loader {
-    override fun total(): Int {
-        TODO("Not yet implemented")
-    }
+class MobiLoader(filename: String, language: String) : Loader(filename, language) {
 
     override suspend fun parse(inputStream: InputStream) {
         TODO("Not yet implemented")
@@ -23,7 +20,7 @@ class MobiLoader : Loader {
         TODO("Not yet implemented")
     }
 
-    override fun writeNewText() {
+    override fun close() {
         TODO("Not yet implemented")
     }
 }

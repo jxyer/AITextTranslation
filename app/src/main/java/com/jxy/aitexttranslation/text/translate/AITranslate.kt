@@ -1,10 +1,8 @@
 package com.jxy.aitexttranslation.text.translate
 
-import com.jxy.aitexttranslation.ProjectConfig
 import com.jxy.aitexttranslation.Tool
-import com.jxy.aitexttranslation.net.BaseService
-import okhttp3.MediaType
-import okhttp3.RequestBody
+import com.jxy.aitexttranslation.net.GPT
+import kotlinx.coroutines.flow.single
 
 class AITranslate(private val targetLanguage: String) : Translate {
 
@@ -26,23 +24,7 @@ class AITranslate(private val targetLanguage: String) : Translate {
                 "response_format": { "type": "text" }
             }
         """.trimIndent()
-        val response = BaseService.openaiService.completions(
-            key = "Bearer ${ProjectConfig.AI_TOKEN}",
-            requestParam = RequestBody.create(
-                MediaType.parse("application/json; charset=utf-8"),
-                json
-            )
-        )
-        if (response.isSuccessful) {
-            val resultJson = response.body()!!
-                .get("choices").asJsonArray.get(0).asJsonObject.get("message").asJsonObject.get("content")
-            println(
-                "translated:$resultJson"
-            )
-            return resultJson.toString()
-        } else {
-            throw Exception("response:" + response.errorBody()!!.string())
-        }
+        return GPT.completions(json).single()
     }
 
 }

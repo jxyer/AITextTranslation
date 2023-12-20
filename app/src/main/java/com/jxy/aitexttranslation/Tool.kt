@@ -2,10 +2,8 @@ package com.jxy.aitexttranslation
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.jxy.aitexttranslation.error.OpenAIException
-import com.jxy.aitexttranslation.net.BaseService
-import okhttp3.MediaType
-import okhttp3.RequestBody
+import com.jxy.aitexttranslation.net.GPT
+import kotlinx.coroutines.flow.single
 
 object Tool {
 
@@ -31,11 +29,8 @@ object Tool {
     )
 
     suspend fun languagePunctuation(language: String): LanguagePunctuationResult {
-        val response = BaseService.openaiService.completions(
-            key = "Bearer ${ProjectConfig.AI_TOKEN}",
-            requestParam = RequestBody.create(
-                MediaType.parse("application/json; charset=utf-8"),
-                """
+        val result = GPT.completions(
+            """
                 {
                     "model": "gpt-3.5-turbo-1106",
                     "messages": [
@@ -48,21 +43,11 @@ object Tool {
                     "response_format": { "type": "json_object" }
                 }               
                 """.trimIndent()
-            )
+        ).single()
+        return Gson().fromJson(
+            result,
+            TypeToken.get(LanguagePunctuationResult::class.java)
         )
-        if (response.isSuccessful) {
-            val resultJson = response.body()!!
-                .get("choices").asJsonArray.get(0).asJsonObject.get("message").asJsonObject.get("content")
-            println(
-                "punctuation: ${resultJson.asString}"
-            )
-            return Gson().fromJson(
-                resultJson.asString,
-                TypeToken.get(LanguagePunctuationResult::class.java)
-            )
-        } else {
-            throw OpenAIException(response.errorBody()!!.string())
-        }
     }
 
 }
